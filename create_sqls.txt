@@ -164,4 +164,4 @@ create table pacco.rtmss (
     startTime timestamp default null,
     endtime timestamp default null,
     foreign key (rtmssListId) references rtmss_list(rtmssListId)
-)
+) engine = InnoDB;
