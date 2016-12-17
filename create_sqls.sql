@@ -10,7 +10,7 @@ create table pacco.user (
     terminalId char(64), # <-32??
     password varchar(128),
     mailAddress varchar(256)
-);
+) engine = InnoDB;
 
 ## room
 create table pacco.room (
@@ -110,13 +110,13 @@ create table pacco.answer_list (
 
 ## answer
 create table pacco.answer (
-    answerId bigint not null auto_increment primary,
+    answerId bigint not null auto_increment primary key,
     qId bigint not null,
     answerListId bigint not null,
     answer varchar(256) default '',
-    foreign key qId references survey_question(qId),
-    foreign key answerListId references answer_list(answerListId)
-) engine = InnoDB
+    foreign key (qId) references survey_question(qId),
+    foreign key (answerListId) references answer_list(answerListId)
+) engine = InnoDB;
 
 ## chat
 create table pacco.chat (
@@ -125,8 +125,8 @@ create table pacco.chat (
     userId bigint not null,
     content varchar(128) default '',
     chatTime timestamp not null default current_timestamp on update current_timestamp,
-    foreign key roomId references room(roomId),
-    foreign key userId references user(userId)
+    foreign key (roomId) references room(roomId),
+    foreign key (userId) references user(userId)
 ) engine = InnoDB;
 
 ## message
@@ -137,9 +137,9 @@ create table pacco.message (
     toUser bigint not null,
     content varchar(256) default '',
     messageTime timestamp not null default current_timestamp on update current_timestamp,
-    foreign key roomId references room(roomId)
-    foreign key fromUser references user(userId)
-    foreign key toUser references uesr(userId)
+    foreign key (roomId) references room(roomId),
+    foreign key (fromUser) references user(userId),
+    foreign key (toUser) references user(userId)
 ) engine = InnoDB;
 
 ## rtmss list
@@ -149,8 +149,8 @@ create table pacco.rtmss_list (
     color1Text varchar(32) default 'COLOR1',
     color2Text varchar(32) default 'COLOR2',
     color3Text varchar(32) default 'COLOR3',
-    startTime timestamp default null,
-    endTime timestamp default null,
+    startTime timestamp null default null,
+    endTime timestamp null default null,
     foreign key (roomId) references room(roomId)
 ) engine = InnoDB;
 
@@ -161,7 +161,7 @@ create table pacco.rtmss (
     color1Sum int not null default 0,
     color2Sum int not null default 0,
     color3Sum int not null default 0,
-    startTime timestamp default null,
-    endtime timestamp default null,
+    startTime timestamp null default null,
+    endtime timestamp null default null,
     foreign key (rtmssListId) references rtmss_list(rtmssListId)
 ) engine = InnoDB;
