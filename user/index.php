@@ -125,7 +125,28 @@ function create_account($name, $terminalId, $password, $mail_address) {
 
 // change account information
 function change_account($privateId, $name, $password, $mail_address) {
-    global $DNS, $USER, $PW;
+    // need private ID
+    if (empty($privateId)) {
+        echo badreq();
+        die();
+    }
+    
+    global $DNS, $USER, $PW; // use global parameter
+    
+    try {
+        $pdo = new PDO($DNS, $USER, $PW); // connect
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+        
+    } catch (Exception $e) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
+
+
     return $UESR;
 }
 
