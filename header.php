@@ -2,10 +2,13 @@
 //Timezone
 date_default_timezone_set('Asia/Tokyo');
 
+// NOTICIE 非表示
+error_reporting(E_ALL & ~E_NOTICE);
+
 // DB 接続パラメータ
-$dsn = "mysql:dbname=krlab_nfc;host=localhost;charset=utf8";
-$user = "root";
-$pass = "";
+$DNS = "mysql:dbname=pacco;host=localhost;charset=utf8";
+$USER = "root";
+$PW = "";
 
 //応答処理
 function ok() {
