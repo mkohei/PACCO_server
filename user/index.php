@@ -130,6 +130,11 @@ function change_account($privateId, $name, $password, $mail_address) {
         echo badreq();
         die();
     }
+    // need name or password or mail address
+    if (empty($name) and empty($password) and empty($mail_address)) {
+        echo badreq();
+        die();
+    }
     
     global $DNS, $USER, $PW; // use global parameter
     
@@ -139,15 +144,53 @@ function change_account($privateId, $name, $password, $mail_address) {
             echo servererr();
             die();
         }
-        
+
+        // Update account information
+        $pdo->beginTransaction();
+        try {
+            $sql = "UPDATE user SET ";
+            $params = array ();
+            $first = true;
+            if (!empty($name)) {
+                $sql = $sql."name=:name";
+                $first = false;
+                $params[':name'] = $name;
+            }
+            if (!empty($password)) {
+                if (!$first) $sql = $sql.", ";
+                $sql = $sql."password=:password";
+                $first = false;
+                $params[':password'] = $password;
+            }
+            if (!empty($mail_address)) {
+                if (!$first) $sql = $sql.", ";
+                $sql = $sql."mailAddress=:mailAddress";
+                $first = false;
+                $params[':mailAddress'] = $mail_address;
+            }
+            $sql = $sql." WHERE privateId = :privateId";
+            $params[':privateId'] = $privateId;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            $pdo = null;
+            if ($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $pdo = null;
+            echo servererr();
+            die();
+        }
     } catch (Exception $e) {
         $pdo = null;
         echo servererr();
         die();
     }
-
-
-    return $UESR;
 }
 
 ?>
