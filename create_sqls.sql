@@ -5,7 +5,7 @@ create database pacco;
 ## user
 create table pacco.user (
     userId bigint not null auto_increment primary key,
-    privateId char(64) not null unique,
+    privateId char(32) not null unique,
     name varchar(32) not null default 'NONAME' ,
     terminalId char(64), # <-32??
     password varchar(128),
