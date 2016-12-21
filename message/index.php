@@ -8,6 +8,12 @@ $KEY_PRIVATE_ID = "privateId";
 $KEY_ROOM_ID = "roomId";
 $KEY_LAST_TIME = "lastTime";
 
+// JSON KEY : send message
+# room ID
+# private ID
+$KEY_UESR_ID = "userId";
+# content
+
 // DB SELECT RESULT KEY : update message
 $KEY_MESSAGE_ID = "messageId";
 # room ID : 
@@ -34,6 +40,14 @@ if ($req == "GET") {
 
 } else if ($req == "POST") {
     // send message
+    $json_string = file_get_contents('php://input'); # Content-Type:application/json
+    $json = json_decode($json_string, true);
+    $roomId = $json[$KEY_ROOM_ID];
+    $privateId = $json[$KEY_PRIVATE_ID];
+    $userId = $json[$KEY_USER_ID];
+    $content = $json[$KEY_CONTENT];
+    echo send_message($roomId, $privateId, $userId, $content);
+    return;
 
 } else if ($req == "PUT") {
     // lock message
@@ -104,6 +118,12 @@ function get_message($privateId, $roomId, $lastTime) {
         echo servererr();
         die();
     }
+}
+
+
+// send message
+function send_message($roomId, $privateId, $userId, $content) {
+    
 }
 
 ?>
