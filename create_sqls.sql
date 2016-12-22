@@ -4,7 +4,7 @@ create database pacco;
 # TABLE作成
 ## user
 create table pacco.user (
-    userId bigint not null auto_increment primary key,
+    userId int not null auto_increment primary key,
     privateId char(32) not null unique,
     name varchar(32) not null default 'NONAME' ,
     terminalId char(64), # <-32??
@@ -14,10 +14,10 @@ create table pacco.user (
 
 ## room
 create table pacco.room (
-    roomId bigint not null auto_increment primary key,
+    roomId int not null auto_increment primary key,
     name varchar(128) not null default 'ROOM',
     purpose varchar(256) default '',
-    host bigint,
+    host int,
     isPublic boolean not null default false,
     canJoin boolean not null default false,
     rtmssWanted boolean not null default false,
@@ -27,9 +27,9 @@ create table pacco.room (
 
 ## affiliation
 create table pacco.affiliation (
-    affiliationId bigint not null auto_increment primary key,
-    userId bigint not null,
-    roomId bigint not null,
+    affiliationId int not null auto_increment primary key,
+    userId int not null,
+    roomId int not null,
     hasPermissionDoc boolean not null default false,
     hasPermissionSur boolean not null default false,
     affiliationTime timestamp default current_timestamp on update current_timestamp,
@@ -39,10 +39,10 @@ create table pacco.affiliation (
 
 ## document
 create table pacco.document (
-    docId bigint not null auto_increment primary key,
+    docId int not null auto_increment primary key,
     name varchar(256),
-    roomId bigint not null,
-    uploader bigint,
+    roomId int not null,
+    uploader int,
     uploadTime timestamp default current_timestamp on update current_timestamp,
     foreign key (roomId) references room(roomId),
     foreign key (uploader) references user(userId)
@@ -50,13 +50,13 @@ create table pacco.document (
 
 ## document memo
 create table pacco.document_memo (
-    memoId bigint not null auto_increment primary key,
-    docId bigint not null,
+    memoId int not null auto_increment primary key,
+    docId int not null,
     page int not null default 0,
     x int not null default 0,
     y int not null default 0,
     comment varchar(64) default '',
-    creator bigint,
+    creator int,
     memoTime timestamp default current_timestamp on update current_timestamp,
     foreign key (docId) references document(docId),
     foreign key (creator) references user(userId)
@@ -64,9 +64,9 @@ create table pacco.document_memo (
 
 ## survey
 create table pacco.survey (
-    surveyId bigint not null auto_increment primary key,
-    roomId bigint not null,
-    creator bigint,
+    surveyId int not null auto_increment primary key,
+    roomId int not null,
+    creator int,
     name varchar(32) not null default 'SURCEY',
     description varchar(256) default '',
     answerWanted boolean not null default false,
@@ -75,44 +75,44 @@ create table pacco.survey (
     foreign key (creator) references user(userId)
 ) engine = InnoDB;
 
-## survey question
-create table pacco.survey_question (
-    qId bigint not null auto_increment primary key,
-    surveyId bigint not null,
-    qText varchar(256) default '',
-    foreign key (surveyId) references survey(surveyId)
-) engine = InnoDB;
-
 ## survey type
 create table pacco.survey_type (
-    typeId bigint not null auto_increment primary key,
+    typeId int not null auto_increment primary key,
     type varchar(16) not null
 );
 
+## survey question
+create table pacco.survey_question (
+    qId int not null auto_increment primary key,
+    surveyId int not null,
+    qText varchar(256) default '',
+    type int not null,
+    foreign key (surveyId) references survey(surveyId),
+    foreign key (type) references survey_type(typeId)
+) engine = InnoDB;
+
 ## survey item
 create table pacco.survey_item (
-    itemId bigint not null auto_increment primary key,
-    qId bigint not null,
+    itemId int not null auto_increment primary key,
+    qId int not null,
     text varchar(32),
-    itemType bigint not null,
-    foreign key (qId) references survey_question(qId),
-    foreign key (itemType) references survey_type(typeId)
+    foreign key (qId) references survey_question(qId)
 ) engine = InnoDB;
 
 ## answer list
 create table pacco.answer_list (
-    answerListId bigint not null auto_increment primary key,
-    surveyId bigint not null,
-    answerer bigint not null,
+    answerListId int not null auto_increment primary key,
+    surveyId int not null,
+    answerer int not null,
     foreign key (surveyId) references survey(surveyId),
     foreign key (answerer) references user(userId)
 ) engine = InnoDB;
 
 ## answer
 create table pacco.answer (
-    answerId bigint not null auto_increment primary key,
-    qId bigint not null,
-    answerListId bigint not null,
+    answerId int not null auto_increment primary key,
+    qId int not null,
+    answerListId int not null,
     answer varchar(256) default '',
     foreign key (qId) references survey_question(qId),
     foreign key (answerListId) references answer_list(answerListId)
@@ -120,9 +120,9 @@ create table pacco.answer (
 
 ## chat
 create table pacco.chat (
-    chatId bigint not null auto_increment primary key,
-    roomId bigint not null,
-    userId bigint not null,
+    chatId int not null auto_increment primary key,
+    roomId int not null,
+    userId int not null,
     content varchar(128) default '',
     chatTime timestamp not null default current_timestamp on update current_timestamp,
     foreign key (roomId) references room(roomId),
@@ -131,10 +131,10 @@ create table pacco.chat (
 
 ## message
 create table pacco.message (
-    messageId bigint not null auto_increment primary key,
-    roomId bigint not null,
-    fromUser bigint not null,
-    toUser bigint not null,
+    messageId int not null auto_increment primary key,
+    roomId int not null,
+    fromUser int not null,
+    toUser int not null,
     content varchar(256) default '',
     messageTime timestamp not null default current_timestamp on update current_timestamp,
     foreign key (roomId) references room(roomId),
@@ -144,8 +144,8 @@ create table pacco.message (
 
 ## rtmss list
 create table pacco.rtmss_list (
-    rtmssListId bigint not null auto_increment primary key,
-    roomId bigint not null,
+    rtmssListId int not null auto_increment primary key,
+    roomId int not null,
     color1Text varchar(32) default 'COLOR1',
     color2Text varchar(32) default 'COLOR2',
     color3Text varchar(32) default 'COLOR3',
@@ -156,8 +156,8 @@ create table pacco.rtmss_list (
 
 ## rtmss
 create table pacco.rtmss (
-    rtmssId bigint not null auto_increment primary key,
-    rtmssListId bigint not null,
+    rtmssId int not null auto_increment primary key,
+    rtmssListId int not null,
     color1Sum int not null default 0,
     color2Sum int not null default 0,
     color3Sum int not null default 0,
