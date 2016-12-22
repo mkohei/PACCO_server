@@ -11,7 +11,7 @@ $KEY_LAST_TIME = "lastTime";
 // JSON KEY : send message
 # room ID
 # private ID
-$KEY_UESR_ID = "userId";
+$KEY_USER_ID = "userId";
 # content
 
 // DB SELECT RESULT KEY : update message
@@ -123,7 +123,52 @@ function get_message($privateId, $roomId, $lastTime) {
 
 // send message
 function send_message($roomId, $privateId, $userId, $content) {
-    
+    if (empty($roomId) or empty($privateId) or empty($userId)) {
+        return badreq();
+    }
+
+    global $DNS, $USER, $PW;
+
+    try {
+        $pdo = new PDO($DNS, $USER, $PW);
+        if ($pdo == null) return servererr();
+
+        // Insert message
+        // SQL
+        $pdo->beginTransaction();
+        try {
+            $sql = "INSERT INTO message
+                (roomId, fromUser, toUser, content)
+                VALUES (:roomId, (SELECT userId FROM user WHERE privateId = :privateId), :toUser, :content)";
+            $params = array (
+                ':roomId' => $roomId,
+                ':privateId' => $privateId,
+                ':toUser' => $userId,
+                ':content' => $content
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            $pdo = null;
+            pure_dump($stmt->rowCount());
+            return ok();
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $pdo = null;
+            return servererr();
+        }
+
+    } catch (Exception $ex) {
+        $pdo = null;
+        return servererr();
+    }
+}
+
+
+// lock message
+function lock_message() {
+
 }
 
 ?>
