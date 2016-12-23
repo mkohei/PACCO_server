@@ -14,6 +14,11 @@ $KEY_LAST_TIME = "lastTime";
 $KEY_USER_ID = "userId";
 # content
 
+// QUERY KEY : lock message
+# room ID
+# private ID
+$KEY_LOCK = "lock";
+
 // DB SELECT RESULT KEY : update message
 $KEY_MESSAGE_ID = "messageId";
 # room ID : 
@@ -51,6 +56,13 @@ if ($req == "GET") {
 
 } else if ($req == "PUT") {
     // lock message
+    $params = array ();
+    parse_str(file_get_contents('php://input'), $params);
+    $roomId = $params[$KEY_ROOM_ID];
+    $privateId = $params[$KEY_PRIVATE_ID];
+    $lock = $params[$KEY_LOCK];
+    echo lock_message($roomId, $privateId, $lock);
+    return;
 
 } else {
     echo badreq();
@@ -131,7 +143,10 @@ function send_message($roomId, $privateId, $userId, $content) {
 
     try {
         $pdo = new PDO($DNS, $USER, $PW);
-        if ($pdo == null) return servererr();
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
 
         // Insert message
         // SQL
@@ -156,19 +171,51 @@ function send_message($roomId, $privateId, $userId, $content) {
         } catch (Exception $e) {
             $pdo->rollBack();
             $pdo = null;
-            return servererr();
+            echo servererr();
+            die();
+
         }
 
     } catch (Exception $ex) {
         $pdo = null;
-        return servererr();
+        echo servererr();
+        die();
     }
 }
 
 
 // lock message
-function lock_message() {
+function lock_message($roomId, $privateId, $lock) {
+    if (empty($roomId) or empty($privateId) or empty($lock)) 
+        badreq();
+    
+    global $DNS, $USER, $PW;
 
+    try {
+        $pdo = new PDO($DNS, $UER, $PW);
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+
+        // Put lock message
+        $pdo->beginTransaction();
+        try {
+            $sql = "";
+
+        } catch (Exceotion $ex) {
+            $pdo->rollBack();
+            $pdo = null;
+            echo servererr();
+            die();
+        } 
+
+    } catch (Exception $e) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
+    
 }
 
 ?>
