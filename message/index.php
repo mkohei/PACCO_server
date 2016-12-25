@@ -97,24 +97,28 @@ function get_message($privateId, $roomId, $lastTime) {
             WHERE a.fromUser = b.userId
             AND a.toUser = c.userId
             AND (b.privateId = :privateId OR c.privateId = :privateId)
+            AND roomId = :roomId,
             AND a.messageTime >= :lastTime";
         // SELECT
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':privateId' => $privateId,
+            ':roomId' => $roomId,
             ':lastTime' => $lastTime
         );
         $stmt->execute($params);
         $result = $stmt->fetchAll();
         $pdo = null;
-        global $KEY_MESSAGE_ID, $KEY_TO_USER, $KEY_FROM_USER, $KEY_CONTENT, $KEY_MESSAGE_TIME, $KEY_LAST_TIME, $KEY_MESSAGES, $TIME_FORMAT;
+        global $KEY_MESSAGE_ID, $KEY_TO_USER, $KEY_FROM_USER, $KEY_ROOM_ID, $KEY_CONTENT, $KEY_MESSAGE_TIME, $KEY_LAST_TIME, $KEY_MESSAGES, $TIME_FORMAT;
         $messages = array();
         foreach ($result as $val) {
             $mes = array (
-                $KEY_MESSAGE_ID => $val[$KEY_MESSAGE_ID],
-                $KEY_TO_USER => $val[$KEY_TO_USER],
-                $KEY_FROM_USER => $val[$KEY_FROM_USER],
-                $KEY_CONTENT => $val[$KEY_CONTENT]
+                $KEY_MESSAGE_ID => (int)$val[$KEY_MESSAGE_ID],
+                $KEY_TO_USER => (int)$val[$KEY_TO_USER],
+                $KEY_FROM_USER => (int)$val[$KEY_FROM_USER],
+                $KEY_ROOM_ID => (int)$$val[$KEY_ROOM_ID],
+                $KEY_CONTENT => $val[$KEY_CONTENT],
+                $KEY_MESSAGE_TIME => $val[$KEY_MESSAGE_TIME]
             );
             $messages[] = $mes;
         }
