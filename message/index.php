@@ -58,9 +58,10 @@ if ($req == "GET") {
     // lock message
     $params = array ();
     parse_str(file_get_contents('php://input'), $params);
-    $roomId = $params[$KEY_ROOM_ID];
+    $roomId = (int)$params[$KEY_ROOM_ID];
     $privateId = $params[$KEY_PRIVATE_ID];
     $lock = $params[$KEY_LOCK];
+    $lock = $lock == "true" ? true : false;
     echo lock_message($roomId, $privateId, $lock);
     return;
 
@@ -152,6 +153,24 @@ function send_message($roomId, $privateId, $userId, $content) {
         // SQL
         $pdo->beginTransaction();
         try {
+            // roomId, privateIdの整合性（所属しているか）とmessageロックの確認
+            $sql = "SELECT COUNT(*) AS num FROM room a, affiliation b, user c
+                WHERE a.roomId = b.roomId AND b.userId = c.userId
+                AND a.roomId = :roomId AND c.privateId = :privateId
+                AND a.messageIsLocked = false";
+            $params = array (
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetchAll();
+            $num = (int)$result[0]['num'];
+            if ($num != 1) {
+                echo badreq();
+                die();
+            }
+
             $sql = "INSERT INTO message
                 (roomId, fromUser, toUser, content)
                 VALUES (:roomId, (SELECT userId FROM user WHERE privateId = :privateId), :toUser, :content)";
@@ -165,7 +184,6 @@ function send_message($roomId, $privateId, $userId, $content) {
             $stmt->execute($params);
             $pdo->commit();
             $pdo = null;
-            pure_dump($stmt->rowCount());
             return ok();
 
         } catch (Exception $e) {
@@ -188,11 +206,11 @@ function send_message($roomId, $privateId, $userId, $content) {
 function lock_message($roomId, $privateId, $lock) {
     if (empty($roomId) or empty($privateId) or empty($lock)) 
         badreq();
-    
+
     global $DNS, $USER, $PW;
 
     try {
-        $pdo = new PDO($DNS, $UER, $PW);
+        $pdo = new PDO($DNS, $USER, $PW);
         if ($pdo == null) {
             echo servererr();
             die();
@@ -201,7 +219,24 @@ function lock_message($roomId, $privateId, $lock) {
         // Put lock message
         $pdo->beginTransaction();
         try {
-            $sql = "";
+            $sql = "UPDATE room a, user b
+                SET a.messageIsLocked = :lock
+                WHERE a.host = b.userId
+                AND a.roomId = :roomId
+                AND b.privateId = :privateId";
+            $params = array (
+                ':lock' => $lock,
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            if ($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
 
         } catch (Exceotion $ex) {
             $pdo->rollBack();
