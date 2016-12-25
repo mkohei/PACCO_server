@@ -20,6 +20,8 @@ create table pacco.room (
     host int,
     isPublic boolean not null default false,
     canJoin boolean not null default false,
+    chatIsLocked boolean not null default false,
+    messageIsLocked boolean not null default false,
     rtmssWanted boolean not null default false,
     isDeleted boolean not null default false,
     foreign key (host) references user(userId)
