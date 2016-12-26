@@ -200,7 +200,55 @@ function send_chat($privateId, $roomId, $content) {
 
 // lock chat
 function lock_chat($privateId, $roomId, $lock) {
+    var_dump($privateId);
+    var_dump($roomId);
+    var_dump(is_null($lock));
+    if (empty($privateId) or empty($roomId) or is_null($lock)) {
+        echo badreq();
+        die();
+    }
 
+    global $DNS, $USER, $PW;
+
+    try {
+        $pdo = new PDO($DNS, $USER, $PW);
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+
+        // Put lock chat
+        $pdo->beginTransaction();
+        try {
+            $sql = "UPDATE room a, user b SET a.chatIsLocked = :lock
+                WHERE a.host = b.userId
+                AND roomId = :roomId AND b.privateId = :privateId";
+            $params = array (
+                ':lock' => $lock,
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            if ($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
+
+        } catch (Exception $ex) {
+            $pdo->rollBack();
+            $pdo->null;
+            echo servererr();
+            die();
+        }
+
+    } catch (Exception $e) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
 }
 
 ?>
