@@ -132,12 +132,74 @@ function get_chat($privateId, $roomId, $lastTime) {
 }
 
 // send chat
-function send_chat($roomId, $privateId, $content) {
+function send_chat($privateId, $roomId, $content) {
+    if (empty($privateId) or empty($roomId) or empty($content)) {
+        echo badreq();
+        die();
+    }
+
+    global $DNS, $USER, $PW;
+
+    try {
+        $pdo = new PDO($DNS, $USER, $PW);
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+
+        // Insert chat
+        // SQL
+        $pdo->beginTransaction();
+        try {
+            // roomId, privateIdの整合性(所属しているか)とchatロックの確認　
+            $sql = "SELECT COUNT(*) AS num FROM room a, affiliation b, user c
+                WHERE a.roomId = b.roomId AND b.userId = c.userId
+                AND a.roomId = :roomId AND c.privateId = :privateId
+                AND a.chatIsLocked = false";
+            $params = array (
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $result = $stmt->fetchAll();
+            $num = (int)$result[0][0];
+            if ($num != 1) {
+                echo badreq();
+                die();
+            }
+
+            // INSERT
+            $sql = "INSERT INTO chat
+                (roomId, userId, content)
+                VALUES (:roomId, (SELECT userId FROM user WHERE privateId = :privateId), :content)";
+            $params = array (
+                ':roomId' => $roomId,
+                ':privateId' => $privateId,
+                ':content' => $content
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            $pdo = null;
+            return ok();
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $pdo = null;
+            echo servererr();
+            die();
+        }
+    } catch (Exception $ex) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
 
 }
 
 // lock chat
-function lock_chat($roomId, $privateId, $lock) {
+function lock_chat($privateId, $roomId, $lock) {
 
 }
 
