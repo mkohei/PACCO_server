@@ -208,7 +208,7 @@ function send_message($roomId, $privateId, $userId, $content) {
 
 // lock message
 function lock_message($roomId, $privateId, $lock) {
-    if (empty($roomId) or empty($privateId) or empty($lock)) 
+    if (empty($roomId) or empty($privateId) or is_null($lock)) 
         badreq();
 
     global $DNS, $USER, $PW;
