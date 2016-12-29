@@ -200,9 +200,6 @@ function send_chat($privateId, $roomId, $content) {
 
 // lock chat
 function lock_chat($privateId, $roomId, $lock) {
-    var_dump($privateId);
-    var_dump($roomId);
-    var_dump(is_null($lock));
     if (empty($privateId) or empty($roomId) or is_null($lock)) {
         echo badreq();
         die();
