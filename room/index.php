@@ -128,9 +128,9 @@ if($req == "POST") {
 //create room
 function create_room($name, $purpose, $isPublic, $password, $host) {
     //need host
-    if(empty($host) == true) 
+    if(empty($host)){ 
         return badreq();
-    
+    }
 
 global $DNS, $USER, $PW; // use global parameter
     
@@ -141,13 +141,10 @@ global $DNS, $USER, $PW; // use global parameter
             die();
         }
 
-        //create roomId
-        $roomId = ;
-
         //new room
         $pdo->beginTransaction();
         try {
-            if(empty($name)) $name = 'ROOM'; //$roomが空なら'ROOM'をセット
+            if(empty($name)) $name = 'ROOM'; //$nameが空なら'ROOM'をセット
             //SQL
             $sql = "INSERT INTO pacco.room
             (name, purpose, isPublic, password, host)
@@ -164,22 +161,14 @@ global $DNS, $USER, $PW; // use global parameter
             );
             $stmt -> execute($params);
             $pdo -> commit();
+            return ok();
+
         } catch (Exception $e) {
             $pdo -> rollBack();
             echo servererr();
             die();
         }
-        
-        $sql = "SELECT last_insert_id()";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $pdo = null;
-
-        //return 
-        return ok();
-
-    } catch(Exception $ex) {
+     } catch(Exception $ex) {
         $pdo = null;
         echo servererr();
         die();
@@ -188,6 +177,9 @@ global $DNS, $USER, $PW; // use global parameter
 
 //affiliation room
 function affiliation_room($roomId, $privateId) {
+    if(empty(roomId) or empty(privateId)) {
+        return badreq();
+    }
 
 global $DNS, $USER, $PW; // use global parameter
     
@@ -196,6 +188,11 @@ global $DNS, $USER, $PW; // use global parameter
         if ($pdo == null) {
             echo servererr();
             die();
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $sql = ""
         }
 }
 
@@ -219,7 +216,7 @@ global $DNS, $USER, $PW; // use global parameter
         //delete room information
         $pdo -> beginTransaction();
         try {
-            $sql = "";
+            $sql = "UPDATE room SET";
             $params = array ();
             $first = true;
 
@@ -241,7 +238,7 @@ global $DNS, $USER, $PW; // use global parameter
             echo servererr();
             die();
         }
-    } catch (Exception $e) {
+    } catch (Exception $ex) {
         $pdo = null;
         echo servererr();
         die();
