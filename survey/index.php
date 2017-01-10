@@ -101,13 +101,15 @@ if($req == "POST"){
 
 // GET
 if($req == "GET") {
+    $request = $_GET[$KEY_REQUEST];
+    
     if($request == "SURVEY_LIST") {
-    // get survey list
-    $privateId = $_GET[$KEY_PRIVATE_ID];
-    $roomId = $_GET[$KEY_ROOM_ID];
-    $lastTime = $_GET[$KEY_LAST_TIME];
-    echo get_survey_list($privateId, $roomId, $lastTime);
-    return;
+        // get survey list
+        $privateId = $_GET[$KEY_PRIVATE_ID];
+        $roomId = $_GET[$KEY_ROOM_ID];
+        $lastTime = $_GET[$KEY_LAST_TIME];
+        echo get_survey_list($privateId, $roomId, $lastTime);
+        return;
 
     } else if($request == "SURVEY") {
         // get survey 
@@ -151,13 +153,17 @@ function create_survey($json) {
         // Insert new survey
         $pdo->beginTransaction();
         try {
+            // 
+            $roomId = $json[$KEY_ROOM_ID];
+            $privateId = $json[$KEY_CREATOR];
+            
             // surveyをcreateする条件を満たしているか
-            $sql = "SELECT COUNT(*) FROM room a, affiliation b, user c, user d 
+            $sql = "SELECT b.userId FROM room a, affiliation b, user c, user d 
                 WHERE a.host = c.userId
                 AND a.roomId = b.roomId
                 AND b.userId = d.userId
                 AND d.privateId = :privateId
-                AND (c.privateId = :privateId OR hasPermissionSur = true)";
+                AND (c.privateId = :privateId OR c.hasPermissionSur = true)";
 
             $params = array (
                 ':roomId' => $roomId,
@@ -167,38 +173,69 @@ function create_survey($json) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $result = $stmt->fetchAll();
-            $num = (int)$result[0][0];
+            $userId = (int)$result[0]["roomId"];
 
-            if($num != 1){
+            if(empty($uesrId)){
                 echo badreq();
                 die();
             }
 
             //INSERT
-            $sql = "INSERT INTO pacco.survey
-            (roomId, name, creator, description, questions, qText, items, text, itemtype)
-            VALUES
-            (:roomId, :name, (SELECT userId FROM room WHERE $privateId = :privateId), questions, qText, items, text, itemtype)";
-
-            $stmt = $pdo->prepare($sql);
+            // survey
+            $name = $json[$KEY_NAME];
+            $description = $json[$KEY_DESCRIPTION];
+            $sql = "INSERT INTO survey (roomId, creator, name, description)
+                VALUES (:roomId, :creator, :name, :description)";
+            $pdo->prepare($sql);
             $params = array (
-                ':surveyCreate' => $surveyCreate, 
-                ':roomId' => $roomId, 
-                ':name' => $name, 
-                ':creator' => $creator, 
-                ':description' => $description, 
-                ':questions' => $questions,
-                'qText' => $qText, 
-                'items' => $items, 
-                'text' => $text, 
-                'itemtype' => $itemtype 
+                ':roomId' => $roomId,
+                ':creator' => $userId,
+                ':name' => $name,
+                ':description' => $description
             );
-
-            $stmt = execute($params);
-            $pdo->commit();
-            $pdo = null;
-            return ok();
+            $pdo->execute($params);
             
+            // survey question
+            $sql = "SELECT last_insert_id()";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetchAll();
+            $surveyId = intval($result[0][0]);
+            $questions = $json[$KEY_QUESTIONS];
+            foreach($questions as $key => $val) {
+                $qText = $val[$KEY_Q_TEXT];
+                $type = $val[$KEY_TYPE];
+                $sql = "INSERT INTO survey_question (surveyId, qText, type)
+                    VALUES (:surveyId, :qText, :type)";
+                $pdo->prepare($sql);
+                $params = array (
+                    ':surveyId' => $surveyId,
+                    ':qText' => $qText,
+                    ':type' => $type
+                );
+                $pdo->execute($params);
+                
+                // survey item
+                $sql = "SELECT last_insert_id()";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute();
+                $result = $stmt->fetchAll();
+                $qId = intval($result[0][0]);
+                $items = $val[$KEY_ITEMS];
+                foreach($items as $key => $item) {
+                    $text = $item[$KEY_TEXT];
+                    $sql = "INSERT INTO survey_item (qId, text)
+                    VALUES (:qId, :text)";
+                    $pdo->prepare($sql);
+                    $params = array (
+                        ':qId' => $qId,
+                        ':text' => $text
+                    );
+                    $pdo->execute($params);
+                }
+                
+            }
+                        
         } catch (Exception $ex){
            $pdo->rollBack();
            $pdo= null;
