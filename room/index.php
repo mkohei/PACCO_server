@@ -33,21 +33,20 @@ $KEY_USER_ID = "userId";
 #request
 
 //QUERY KEY : grant Parmission
+$KEY_PERMISSION_DOC = "permissionDoc";
+$KEY_PERMISSION_SUR = "permissionSur";
 #roomId
 #privateId
 #userId
 #request
-
-//QUERY KEY : delete member
-#roomId
-#privateId
-#userId
 
 //QUERY KEY : change room
 #privateId
 #roomId
 #name
 #purpose
+#password
+#isPublic
 #request
 
 //QUERY KEY : affiliation room
@@ -59,6 +58,7 @@ $req = $_SERVER["REQUEST_METHOD"];
 if($req == "POST") {
     $json_string = file_get_contents('php://input');
     $json = json_decode($json_string, true);
+    $request = $json[$KEY_REQUEST];
     if($request == "CREATE") {
         //create room
         $name = $json[$KEY_NAME];
@@ -79,6 +79,7 @@ if($req == "POST") {
 } else if($req == "PUT") {
     $params = array ();
     parse_str(file_get_contents('php://input'), $params);
+    $request = $params[$KEY_REQUEST];
     if($request == "DELETE"){
         //delete room
         $roomId = $params[$KEY_ROOM_ID];
@@ -99,7 +100,9 @@ if($req == "POST") {
         $roomId = $params[$KEY_ROOM_ID];
         $privateId = $params[$KEY_PRIVATE_ID];
         $userId = $params[$KEY_USER_ID];
-        echo grant_permission($roomId, $privateId, $userId);
+        $permissionDoc = $params[$KEY_PERMISSION_DOC];
+        $permissionSur = $params[$KEY_PERMISSION_SUR];
+        echo grant_permission($roomId, $privateId, $userId, $permissionDoc, $permissionSur);
         return;
 
     } else if($request == "CHANGE") {
@@ -108,17 +111,11 @@ if($req == "POST") {
         $roomId = $params[$KEY_ROOM_ID];
         $name = $params[$KEY_NAME];
         $purpose = $params[$KEY_PURPOSE];
-        echo change_room($privateId, $roomId, $name, $purpose);
+        $password = $params[$KEY_PASSWORD];
+        $isPublic = $params[$KEY_IS_PUBLIC];
+        echo change_room($privateId, $roomId, $name, $purpose, $password, $isPublic);
         return;
     }
-} else if($req == "DELETE") {
-    //delete member
-    $roomId = $params[$KEY_ROOM_ID];
-    $privateId = $params[$KEY_PRIVATE_ID];
-    $userId = $params[$KEY_USER_ID];
-    echo delete_member($roomId, $privateId, $userId);
-    return;
-
 } else {
     //Error
     echo badreq();      
@@ -161,6 +158,7 @@ global $DNS, $USER, $PW; // use global parameter
             );
             $stmt -> execute($params);
             $pdo -> commit();
+            $pdo = null;
             return ok();
 
         } catch (Exception $e) {
@@ -192,16 +190,42 @@ global $DNS, $USER, $PW; // use global parameter
 
         $pdo->beginTransaction();
         try {
-            $sql = ""
+            //SQL
+            $sql = "INSERT INTO affiliation
+                    (roomId, userId)
+                    VALUES 
+                    (:roomId, (SELECT userId FROM user WHERE privateId = :privateId))";
+            //INSERT
+            $params = array (
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            $pdo = null;
+            return ok();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $pdo = null;
+            echo servererr();
+            die();
+
         }
+
+    } catch (Exception $ex) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
 }
+
 
 //delete room
 function delete_room($roomId, $privateId) {
     //need privateId
     if(empty($roomId) or empty($privateId)) {
-        echo badreq();
-        die();
+        return badreq();
     }
 
 global $DNS, $USER, $PW; // use global parameter
@@ -215,13 +239,22 @@ global $DNS, $USER, $PW; // use global parameter
 
         //delete room information
         $pdo -> beginTransaction();
+        //delete room
         try {
-            $sql = "UPDATE room SET";
-            $params = array ();
-            $first = true;
-
-            $sql = $sql." WHERE privateId = :privateId";
-            $params[':privateId'] = $privateId;
+            //SETのもの(isDeleted)をUPDATEする
+            //3行目は結合
+            //4行目は自分がhostであることの証明
+            //5行目は削除するルーム
+            $sql = "UPDATE room a, user b
+            SET isDeleted = true
+            WHERE a.host = b.userId             
+            AND b.privateId = :privateId
+            AND a.roomId = :roomId";
+            //array内で変換
+            $params = array (
+                'roomId' => $roomId,
+                'privateId' => $privateId
+            );
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $pdo->commit();
@@ -248,9 +281,113 @@ global $DNS, $USER, $PW; // use global parameter
 
 //change host
 function change_host($roomId, $privateId, $userId) {
-    if(empty($privateId)) {
-        echo badreq();
+    if(empty($roomId) or empty($privateId) or empty($userId)) {
+        return badreq();
+    }
+
+global $DNS, $USER, $PW; // use global parameter
+    
+    try {
+        $pdo = new PDO($DNS, $USER, $PW); // connect
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+
+        $pdo -> beginTransaction();
+        try{
+            $sql = "UPDATE room a, user b
+                    SET a.host = :userId
+                    WHERE a.host = b.userId
+                    AND a.roomId = :roomId
+                    AND b.privateId = :privateId";
+            $params = array (
+                ':userId' => $userId,
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            if($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $pdo = null;
+            echo servererr();
+            die();
+        }
+    } catch (Exception $ex) {
+        $pdo = null;
+        echo servererr();
         die();
+    }
+}
+
+//grant permission
+function grant_permission($roomId, $privateId, $userId, $permissionDoc, $permissionSur) {
+    if(empty($roomId) or empty($privateId) or empty($userId)) {
+        return badreq();
+    }
+
+    if(empty($permissionDoc) and empty($permissionSur)) {
+        return badreq();
+    }
+
+global $DNS, $USER, $PW; // use global parameter
+    
+    try {
+        $pdo = new PDO($DNS, $USER, $PW); // connect
+        if ($pdo == null) {
+            echo servererr();
+            die();
+        }
+
+        $pdo -> beginTransaction();
+        try{
+            $sql = "UPDATE affiliation a, room b, user c
+                    SET a.hasPermissionDoc = :permissionDoc, a.hasPermissionSur = :permissionSur
+                    WHERE a.roomId = b.roomId
+                    AND b.host = c.userId
+                    AND a.roomId = :roomId
+                    AND a.userId = :userId
+                    AND c.privateId = :privateId";
+            $params = array (
+                ':permissionDoc' => $permissionDoc,
+                ':permissionSur' => $permissionSur,
+                ':roomId' => $roomId,
+                ':userId' => $userId,
+                ':privateId' => $privateId
+            );
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            if ($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
+
+        } catch (Exception $ex) {
+            $pdo->rollBack();
+            $pdo->null;
+            echo servererr();
+            die();
+        }
+    } catch (Exception $e) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
+}
+
+//change room
+function change_room($privateId, $roomId, $name, $purpose, $password, $isPublic) {
+    if(empty($privateId) or empty($roomId)) {
+        return badreq();
     }
 global $DNS, $USER, $PW; // use global parameter
     
@@ -260,40 +397,61 @@ global $DNS, $USER, $PW; // use global parameter
             echo servererr();
             die();
         }
-}
 
-//grant permission
-function grant_permission($roomId, $privateId, $userId) {
-global $DNS, $USER, $PW; // use global parameter
-    
-    try {
-        $pdo = new PDO($DNS, $USER, $PW); // connect
-        if ($pdo == null) {
+        $pdo -> beginTransaction();
+        try {
+            $first = true;
+            $sql = "UPDATE room a, user b SET ";
+            $params = array ();
+            if(!empty($name)) {
+                $sql = $sql."a.name = :name";
+                $first = false;
+                $params[':name'] = $name;
+            }
+            if(!empty($purpose)) {
+                if(!$first) $sql = $sql.", ";
+                $sql = $sql."a.purpose = :purpose";
+                $first = false;
+                $params[':purpose'] = $purpose;
+            }
+            if(!empty($password)) {
+                if(!$first) $sql = $sql.", ";
+                $sql = $sql."a.password = :password";
+                $first = false;
+                $params[':password'] = $password;
+            }
+            if(!is_null($isPublic)) {
+                if(!$first) $sql = $sql.", ";
+                $sql = $sql."a.isPublic = :isPublic";
+                $first = false;
+                $params[':isPublic'] = $isPublic;
+            }
+            $sql = $sql." WHERE a.host = b.userId
+                            AND a.roomId = :roomId
+                            AND b.privateId = :privateId";
+            $params[':roomId'] = $roomId;
+            $params[':privateId'] = $privateId;
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $pdo->commit();
+            $pdo = null;
+            if ($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+            return ok();
+
+        } catch (Exception $ex) {
+            $pdo->rollBack();
+            $pdo = null;
             echo servererr();
             die();
         }
+    } catch (Exception $e) {
+        $pdo = null;
+        echo servererr();
+        die();
+    }
 }
-
-//change room
-function change_room($privateId, $roomId, $name, $purpose) {
-global $DNS, $USER, $PW; // use global parameter
     
-    try {
-        $pdo = new PDO($DNS, $USER, $PW); // connect
-        if ($pdo == null) {
-            echo servererr();
-            die();
-        }
-}
-
-//delete member
-function delete_member($roomId, $privateId, $userId) {
-    global $DNS, $USER, $PW; // use global parameter
-    
-    try {
-        $pdo = new PDO($DNS, $USER, $PW); // connect
-        if ($pdo == null) {
-            echo servererr();
-            die();
-        }
-}
+?>
