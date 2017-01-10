@@ -98,7 +98,7 @@ function get_message($privateId, $roomId, $lastTime) {
             AND a.toUser = c.userId
             AND (b.privateId = :privateId OR c.privateId = :privateId)
             AND roomId = :roomId,
-            AND a.messageTime >= :lastTime";
+            AND a.messageTime = :lastTime";
         // SELECT
         $stmt = $pdo->prepare($sql);
         $params = array (
