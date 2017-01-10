@@ -161,8 +161,7 @@ function create_survey($json) {
 
             $params = array (
                 ':roomId' => $roomId,
-                ':privateId' => $privateId, 
-                ':creator'
+                ':privateId' => $privateId
             );
 
             $stmt = $pdo->prepare($sql);
@@ -237,10 +236,8 @@ function answer_survey($json) {
             AND a.roomId = :roomId OR c.privateId = :privateId";
                 
             $params = array (
-                ':surveyId' => $surveyId, 
-                ':answerer' => $answerer, 
-                ':qId' => $qId, 
-                ':answer' => $answer
+                ':roomId' => $roomId,
+                ':privateId' => $privateId
             );
 
             $stmt = $pdo->prepare($sql);
@@ -304,7 +301,6 @@ function get_survey_list($privateId, $roomId, $lastTime){
         $params = array (
             ':privateId' => $privateId,
             ':roomId' => $roomId,
-            ':lastTime' => $lastTime
         );
         $stmt->execute($params);
         $result = $stmt->fetchAll();
@@ -437,9 +433,7 @@ function answer_get($privateId, $roomId, $surveyId, $lastTime){
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':privateId' => $privateId, 
-            ':roomId' => $roomId,
-            ':surveyId' => $surveyId, 
-            ':lastTime' => $lastTime
+            ':roomId' => $roomId
         );
 
         $stmt->execute($params);
