@@ -1,7 +1,7 @@
 <?php
 
-require "../user/header.php";
-require "../user/utility.php";
+require "../header.php";
+require "../utility.php";
 
 //QUERY KEY : create room
 $KEY_REQUEST = "request";
@@ -75,7 +75,10 @@ if($req == "POST") {
         $privateId = $json[$KEY_PRIVATE_ID];
         echo affiliation_room($roomId, $privateId);
         return;
-    } 
+    } else {
+        echo badreq();
+        die();
+    }
 } else if($req == "PUT") {
     $params = array ();
     parse_str(file_get_contents('php://input'), $params);
@@ -92,7 +95,7 @@ if($req == "POST") {
         $roomId = $params[$KEY_ROOM_ID];
         $privateId = $params[$KEY_PRIVATE_ID];
         $userId = $params[$KEY_USER_ID];
-        echo change_host($roomId, $privateId);
+        echo change_host($roomId, $privateId, $userId);
         return;
 
     } else if($request == "GRANT") {
@@ -129,7 +132,7 @@ function create_room($name, $purpose, $isPublic, $password, $host) {
         return badreq();
     }
 
-global $DNS, $USER, $PW; // use global parameter
+    global $DNS, $USER, $PW; // use global parameter
     
     try {
         $pdo = new PDO($DNS, $USER, $PW); // connect
@@ -142,18 +145,31 @@ global $DNS, $USER, $PW; // use global parameter
         $pdo->beginTransaction();
         try {
             if(empty($name)) $name = 'ROOM'; //$nameが空なら'ROOM'をセット
+            if (is_null($isPublic)) $isPublic = false;
+
             //SQL
+            /*
             $sql = "INSERT INTO pacco.room
             (name, purpose, isPublic, password, host)
             VALUES 
-            (:name, :purpose, :isPublic, :password, :host)";
+            (:name, :purpose, :isPublic, :password, :host)";*/
+            $sql = "INSERT INTO pacco.room
+            (name, purpose, isPublic, host)
+            VALUES 
+            (:name, :purpose, :isPublic, :host)";
             //INSERT
             $stmt = $pdo->prepare($sql);
-            $params = array (
+            /*$params = array (
                 ':name' => $name,
                 ':purpose' => $purpose,
                 ':isPublic' => $isPublic,
                 ':password' => $password,
+                ':host' => $host
+            );*/
+            $params = array (
+                ':name' => $name,
+                ':purpose' => $purpose,
+                ':isPublic' => $isPublic,
                 ':host' => $host
             );
             $stmt -> execute($params);
@@ -175,7 +191,7 @@ global $DNS, $USER, $PW; // use global parameter
 
 //affiliation room
 function affiliation_room($roomId, $privateId) {
-    if(empty(roomId) or empty(privateId)) {
+    if(empty($roomId) or empty($privateId)) {
         return badreq();
     }
 
@@ -246,7 +262,7 @@ global $DNS, $USER, $PW; // use global parameter
             //4行目は自分がhostであることの証明
             //5行目は削除するルーム
             $sql = "UPDATE room a, user b
-            SET isDeleted = true
+            SET a.isDeleted = true
             WHERE a.host = b.userId             
             AND b.privateId = :privateId
             AND a.roomId = :roomId";
@@ -356,8 +372,8 @@ global $DNS, $USER, $PW; // use global parameter
                     AND a.userId = :userId
                     AND c.privateId = :privateId";
             $params = array (
-                ':permissionDoc' => $permissionDoc,
-                ':permissionSur' => $permissionSur,
+                ':permissionDoc' => (bool)$permissionDoc,
+                ':permissionSur' => (bool)$permissionSur,
                 ':roomId' => $roomId,
                 ':userId' => $userId,
                 ':privateId' => $privateId
@@ -424,11 +440,15 @@ global $DNS, $USER, $PW; // use global parameter
                 if(!$first) $sql = $sql.", ";
                 $sql = $sql."a.isPublic = :isPublic";
                 $first = false;
-                $params[':isPublic'] = $isPublic;
+                if ($isPublic == "true") $isPublic = true;
+                else $isPublic = false;
+                $params[':isPublic'] = (bool)$isPublic;
             }
             $sql = $sql." WHERE a.host = b.userId
                             AND a.roomId = :roomId
                             AND b.privateId = :privateId";
+            print $sql;
+            pure_dump($params);
             $params[':roomId'] = $roomId;
             $params[':privateId'] = $privateId;
             $stmt = $pdo->prepare($sql);
