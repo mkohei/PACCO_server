@@ -2,6 +2,9 @@
 //Timezone
 date_default_timezone_set('Asia/Tokyo');
 
+// Time format
+$TIME_FORMAT = 'Y-m-d_H:i:s';
+
 // NOTICIE 非表示
 error_reporting(E_ALL & ~E_NOTICE);
 
