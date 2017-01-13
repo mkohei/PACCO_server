@@ -93,7 +93,7 @@ function get_chat($privateId, $roomId, $lastTime) {
             FROM chat a, user b
             WHERE a.userId = b.userId
             AND a.roomId = :roomId AND b.privateId = :privateId
-            AND a.chatTime >= :lastTime";
+            AND a.chatTime = :lastTime";
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':roomId' => $roomId,
