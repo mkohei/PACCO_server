@@ -66,6 +66,8 @@ if($req == "POST") {
         $isPublic = $json[$KEY_IS_PUBLIC];
         $password = $json[$KEY_PASSWORD];
         $host = $json[$KEY_HOST];
+        #$roomId = $json[$KEY_ROOM_ID];
+        #echo create_room($name, $purpose, $isPublic, $password, $host, $roomId);
         echo create_room($name, $purpose, $isPublic, $password, $host);
         return;
 
@@ -127,6 +129,7 @@ if($req == "POST") {
 //functions
 //create room
 function create_room($name, $purpose, $isPublic, $password, $host) {
+#function create_room($name, $purpose, $isPublic, $password, $host, $roomId) {
     //need host
     if(empty($host)){ 
         return badreq();
@@ -152,31 +155,57 @@ function create_room($name, $purpose, $isPublic, $password, $host) {
             $sql = "INSERT INTO pacco.room
             (name, purpose, isPublic, password, host)
             VALUES 
-            (:name, :purpose, :isPublic, :password, :host)";*/
-            $sql = "INSERT INTO pacco.room
-            (name, purpose, isPublic, host)
-            VALUES 
-            (:name, :purpose, :isPublic, :host)";
-            //INSERT
-            $stmt = $pdo->prepare($sql);
-            /*$params = array (
+            (:name, :purpose, :isPublic, :password, :host)";
+            $params = array (
                 ':name' => $name,
                 ':purpose' => $purpose,
                 ':isPublic' => $isPublic,
                 ':password' => $password,
                 ':host' => $host
             );*/
+            
+            #INSERT ROOM
+            $sql = "INSERT INTO pacco.room
+            (name, purpose, isPublic, host)
+            VALUES 
+            (:name, :purpose, :isPublic, :host)";
             $params = array (
                 ':name' => $name,
                 ':purpose' => $purpose,
                 ':isPublic' => $isPublic,
                 ':host' => $host
             );
+            $stmt = $pdo->prepare($sql);
             $stmt -> execute($params);
+            
+            //INSERT AFFILIATION
+            /*
+            $aff_sql = "INSERT INTO affiliation (roomId, userId)
+                    SELECT a.roomId, b.userId
+                    FROM room a, user b
+                    WHERE b.userId=a.host 
+                    AND a.roomId=:roomId
+                    AND a.host=:host";
+            */
+            
+            $aff_sql = "INSERT INTO affiliation (roomId, userId)
+                    VALUES ((SELECT last_insert_id()), :host)";
+                          
+            $aff_params = array (
+                ':host' => $host
+            );
+            $stmt = $pdo->prepare($aff_sql);    
+            $stmt->execute($aff_params);
+
+            if($stmt->rowCount() == 0) {
+                echo badreq();
+                die();
+            }
+
             $pdo -> commit();
             $pdo = null;
             return ok();
-
+            
         } catch (Exception $e) {
             $pdo -> rollBack();
             echo servererr();

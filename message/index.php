@@ -97,14 +97,14 @@ function get_message($privateId, $roomId, $lastTime) {
             WHERE a.fromUser = b.userId
             AND a.toUser = c.userId
             AND (b.privateId = :privateId OR c.privateId = :privateId)
-            AND roomId = :roomId";#,
+            AND roomId = :roomId";
             #AND a.messageTime >= :lastTime";
         // SELECT
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':privateId' => $privateId,
             ':roomId' => $roomId,
-            ':lastTime' => $lastTime
+            #':lastTime' => $lastTime
         );
         $stmt->execute($params);
         $result = $stmt->fetchAll();
@@ -116,7 +116,7 @@ function get_message($privateId, $roomId, $lastTime) {
                 $KEY_MESSAGE_ID => (int)$val[$KEY_MESSAGE_ID],
                 $KEY_TO_USER => (int)$val[$KEY_TO_USER],
                 $KEY_FROM_USER => (int)$val[$KEY_FROM_USER],
-                $KEY_ROOM_ID => (int)$$val[$KEY_ROOM_ID],
+                $KEY_ROOM_ID => (int)$val[$KEY_ROOM_ID],
                 $KEY_CONTENT => $val[$KEY_CONTENT],
                 $KEY_MESSAGE_TIME => $val[$KEY_MESSAGE_TIME]
             );
@@ -145,7 +145,7 @@ function send_message($roomId, $privateId, $userId, $content) {
     }
 
     global $DNS, $USER, $PW;
-
+    echo 'send massage funcation is called.';
     try {
         $pdo = new PDO($DNS, $USER, $PW);
         if ($pdo == null) {
@@ -170,7 +170,8 @@ function send_message($roomId, $privateId, $userId, $content) {
             $stmt->execute($params);
             $result = $stmt->fetchAll();
             $num = (int)$result[0]['num'];
-            if ($num != 1) {
+            pure_dump($result);
+            if ($num >= 1) {
                 echo badreq();
                 die();
             }
