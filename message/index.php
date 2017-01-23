@@ -97,14 +97,14 @@ function get_message($privateId, $roomId, $lastTime) {
             WHERE a.fromUser = b.userId
             AND a.toUser = c.userId
             AND (b.privateId = :privateId OR c.privateId = :privateId)
-            AND roomId = :roomId";
-            #AND a.messageTime >= :lastTime";
+            AND roomId = :roomId
+            AND a.messageTime >= :lastTime";
         // SELECT
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':privateId' => $privateId,
             ':roomId' => $roomId,
-            #':lastTime' => $lastTime
+            ':lastTime' => $lastTime
         );
         $stmt->execute($params);
         $result = $stmt->fetchAll();
@@ -122,7 +122,7 @@ function get_message($privateId, $roomId, $lastTime) {
             );
             $messages[] = $mes;
         }
-        $lastTime = date($TIME_FORMAT);
+        #$lastTime = date($TIME_FORMAT);
         return json_encode(
             array (
                 $KEY_MESSAGES => $messages,

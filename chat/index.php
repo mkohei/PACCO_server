@@ -93,13 +93,13 @@ function get_chat($privateId, $roomId, $lastTime) {
             a.chatId, a.roomId, a.userId, a.content, a.chatTime
             FROM chat a, user b
             WHERE a.userId = b.userId
-            AND a.roomId = :roomId AND b.privateId = :privateId";
-            #AND a.chatTime >= :lastTime";
+            AND a.roomId = :roomId AND b.privateId = :privateId
+            AND a.chatTime >= :lastTime";
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':roomId' => $roomId,
             ':privateId' => $privateId,
-            #':lastTime' => $lastTime
+            ':lastTime' => $lastTime
         );
         $stmt->execute($params);
         $result = $stmt->fetchAll();
@@ -115,8 +115,7 @@ function get_chat($privateId, $roomId, $lastTime) {
             );
             $chats[] = $chat;
         }
-        #$lastTime = date("Y/m/d H:i", getlastmod());
-        $lastTime = date($TIME_FORMAT);
+        #$lastTime = date($TIME_FORMAT);
         return json_encode(
             array (
                 $KEY_CHATS => $chats,
