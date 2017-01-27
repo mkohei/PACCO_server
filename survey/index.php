@@ -6,20 +6,23 @@ require "../utility.php";
 
 // JSON KEY : create survey
 $KEY_REQUEST = "request";
+
 $KEY_ROOM_ID = "roomId";
 $KEY_NAME = "name";
 $KEY_CREATOR = "creator";
 $KEY_DESCRIPTION = "description";
-$KEY_QUESTIONS = "questions";
 $KEY_Q_TEXT = "qText";
-$KEY_ITEMS = "items";
+$KEY_TYPE = "type";
 $KEY_TEXT = "text";
-
+$KEY_QUESTIONS = "questions";
+$KEY_ITEMS = "items";
 
 // JSON KEY : answer survey
 $KEY_SURVEY_ID = "surveyId";
 $KEY_ANSWERER = "answerer";
 $KEY_Q_ID = "qId";
+$KEY_ANSWER_LIST_ID = "answerListId";
+$KEY_ANSWERS = "ANSWERS";
 $KEY_ANSWER = "answer";
 
 
@@ -31,11 +34,11 @@ $KEY_LAST_TIME = "lastTime";
 // RETURN JSON KEY : list get
 # lastTime :
 # surveyId :
-$KEY_NAME = "name";
+# name :
 # creator :
 # description :
 $KEY_ANSWER_WANTED = "answerWanted";
-
+$KEY_SURVEYS = "surveys";
 
 // QUERY KEY : get survey
 # privateId :
@@ -45,14 +48,15 @@ $KEY_ANSWER_WANTED = "answerWanted";
 
 // RETURN JSON KEY : get survey
 # lastTime :
-$KEY_SURVEYS = "surveys";
-$KEY_SURVEY = "survey";
 # qId :
 # qText :
 # items :
 $KEY_ITEM_ID = "itemId";
 # text :
 # itemType :
+$KEY_SURVEY = "survey";
+$KEY_ITEMS = "items";
+
 
 
 // QUERY KEY : answer get
@@ -63,13 +67,14 @@ $KEY_ITEM_ID = "itemId";
 
 // RETURN JSON KEY : answer get
 # lastTime :
-$KEY_QUESTIONS = "questions";
+# questions :
 $KEY_ANSWERS = "answers";
 $KEY_ANSWER_ID = "answerId";
 # answerer :
 # questions :
 # qId :
-$KEY_ANSWER = "answer";
+# answer :
+$KEY_ANSWER_LIST = "answerlist";
 
 
 $req = $_SERVER["REQUEST_METHOD"];
@@ -85,6 +90,7 @@ if($req == "POST"){
     } else if ($request == "ANSWER") {
         echo answer_survey($json);
         return;
+
     } else {
         return badreq();
     }
@@ -104,7 +110,7 @@ if($req == "POST"){
         $privateId = $_GET[$KEY_PRIVATE_ID];
         $roomId = $_GET[$KEY_ROOM_ID];
         $surveyId = $_GET[$KEY_SURVEY_ID];
-        $lastTime = $_GET[$KEY_LASTTIME];
+        $lastTime = $_GET[$KEY_LAST_TIME];
         echo get_survey($privateId, $roomId, $surveyId, $lastTime);
         return;
 
@@ -113,7 +119,7 @@ if($req == "POST"){
         $privateId = $_GET[$KEY_PRIVATE_ID];
         $roomId = $_GET[$KEY_ROOM_ID];
         $surveyId = $_GET[$KEY_SURVEY_ID];
-        $lastTime = $_GET[$KEY_LASTTIME];
+        $lastTime = $_GET[$KEY_LAST_TIME];
         echo answer_get($privateId, $roomId, $surveyId, $lastTime);
         return;
     }
@@ -124,10 +130,6 @@ if($req == "POST"){
 //functions
 //create survey
 function create_survey($json) {
-    if(empty($roomId) or empty($creator)) {
-        return badreq();
-    }
-
     global $DNS, $USER, $PW;
     try {
         $pdo = new PDO($DNS, $USER, $PW);
@@ -135,83 +137,110 @@ function create_survey($json) {
             return servererr();
         }
         // Insert new survey
-        $pdo->beginTransaction();
+        $pdo -> beginTransaction();
         try {
-          $roomId = $json[$KEY_ROOM_ID];
-          $privateId = $json[$KEY_CREATOR];
+            /*
             // surveyをcreateする条件を満たしているか
-            $sql = "SELECT b.userId FROM room a, affiliation b, user c, user d
+             $sql = "SELECT b.userId FROM room a, affiliation b, user c, user d
                 WHERE a.host = c.userId
                 AND a.roomId = b.roomId
-                AND b.userId = d.userId
-                AND d.privateId = :privateId
-                AND (c.privateId = :privateId OR c.hasPermissionSur = true)";
-
+                AND b.userId = d.userId 
+                AND b.roomId = :roomId
+                AND c.userId = :userId
+                OR (d.userId = :userId AND b.hasPermissionSur = true)";
+                /*
+                AND c.privateId = (SELECT c.privateId FROM user c WHERE c.userId = :userId)
+                OR  (d.privateId = (SELECT d.privateId FROM user d WHERE d.userId = :userId)
+                AND b.hasPermissionSur = true)";
+                
+                AND c.privateId = :privateId
+                OR (d.privateId = :privateId AND b.hasPermissionSur = true)";
+                
             $stmt = $pdo->prepare($sql);
             $params = array (
                 ':roomId' => $roomId,
-                ':privateId' => $privateId
+                ':userId' => $userId
+                #':privateId' => $privateId
             );
             $stmt->execute($params);
             $result = $stmt->fetchAll();
-            $userId = (int)$result[0]['roomId'];
-            if(empty($userId)){
+            #pure_dump($result);
+            $userId = (int)$result[0]["roomId"]; // $userId = (int)$result[0]['roomId']
+            if (empty($userId)) {
                 return badreq();
-             }
+             }*/
 
+            global $KEY_ROOM_ID,$KEY_CREATOR,$KEY_NAME,$KEY_DESCRIPTION;
+            $roomId = $json[$KEY_ROOM_ID];
+            $creator = $json[$KEY_CREATOR];
             $name = $json[$KEY_NAME];
             $description = $json[$KEY_DESCRIPTION];
-            $sql = "INSERT INTO pacco.survey (roomId, creator, name, description)
-                VALUES (:roomId, :creator, :name, :description)";
-            $stmt = $pdo->prepare($sql);
+
+            $sql = "INSERT INTO pacco.survey
+                    (roomId, creator, name, description)
+                    VALUES 
+                    (:roomId, :creator, :name, :description)";
             $params = array (
                 ':roomId' => $roomId,
-                ':creator' => $userId,
+                ':creator' => $creator,
                 ':name' => $name,
                 ':description' => $description
             );
+            $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
 
             // survey question
-            $sql = "SELECT last_insert_id()";
+            $sql = "SELECT last_insert_id()"; 
+            // SELECT surveyId FROM pacco.survey
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $result = $stmt->fetchAll();
+            pure_dump($result);
             $surveyId = intval($result[0][0]);
-            $questions = array ();
 
+            
+            global $KEY_QUESTIONS, $KEY_Q_TEXT, $KEY_TYPE;
+            // if (empty($questions))...
+            $questions = $json[$KEY_QUESTIONS];
             foreach($questions as $key => $val) {
                 $qText = $val[$KEY_Q_TEXT];
                 $type = $val[$KEY_TYPE];
-                $sql = "INSERT INTO pacco.survey_question (surveyId, qText, type)
-                    VALUES (:surveyId, :qText, :type)";
-                $pdo->prepare($sql);
-                $questions = array (
+                $sql = "INSERT INTO survey_question
+                        (surveyId, qText, type)
+                        VALUES (:surveyId, :qText, :type)";
+                $stmt = $pdo->prepare($sql);
+                $que = array (
                     ':surveyId' => $surveyId,
-                    ':qText' => $qText,
+                    ':qText' => $qText, 
                     ':type' => $type
                 );
-                $questions[] = $questions;
-                $stmt->execute($questions);
-
+                $stmt->execute($que);
+                /*if ($stmt->rowCount() == 0) {
+                echo bbb;
+                echo badreq();
+                die();
+            }*/
                 // survey item
-                $sql = "SELECT last_insert_id()";
+                $sql = "SELECT last_insert_id()"; // SELECT qId FROM pacco.survey_question
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute();
                 $result = $stmt->fetchAll();
                 $qId = intval($result[0][0]);
-                $items = array ();
-                foreach($items as $key => $item) {
+
+                global $KEY_ITEMS, $KEY_TEXT;
+                $items = $val['items'];
+                foreach($items as $key => $item){
                     $text = $item[$KEY_TEXT];
-                    $sql = "INSERT INTO pacco.survey_item (qId, text)
-                    VALUES (:qId, :text)";
-                    $pdo->prepare($sql);
-                    $items = array (
+                    $sql = "INSERT INTO pacco.survey_item
+                    (qId, text)
+                    VALUES
+                    (:qId, :text)";
+                    $stmt = $pdo->prepare($sql);
+                    $ite = array (
                         ':qId' => $qId,
                         ':text' => $text
                     );
-                    $items[] = $items;
-                    $pdo->execute($items);
+                    $stmt->execute($ite);
                 }
             }
             $pdo->commit();
@@ -229,10 +258,11 @@ function create_survey($json) {
 }
 
 function answer_survey($json) {
-    if((empty($surveyId) or empty($answerer)) == true){
+/*
+    if(empty($surveyId) or empty($answerer)){
         return badreq();
     }
-
+*/
     global $DNS, $USER, $PW;
 
     try {
@@ -243,16 +273,13 @@ function answer_survey($json) {
 
         $pdo->beginTransaction();
         try {
-            // answer_list
-            $roomId = $json[$KEY_ROOM_ID];
-            $privateId = $json[$KEY_ANSWERER];
-
+            /*
             // roomId, privateIdの整合性
-            $sql = "SELECT AS num FROM room a, affiliation b, user c
+            $sql = "SELECT COUNT(*) AS num FROM room a, affiliation b, user c
             WHERE a.roomId = b.roomId
             AND b.userId = c.userId
-            AND (a.roomId = :roomId OR c.privateId = :privateId)";
-
+            AND a.roomId = :roomId
+            AND c.privateId = :privateId";
             $params = array (
                 ':roomId' => $roomId,
                 ':privateId' => $privateId
@@ -261,43 +288,53 @@ function answer_survey($json) {
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             $result = $stmt->fetchAll();
-            $num = (int)$result[0]['num'];
+            $num = (int)$result[0][0];
             if($num != 1){
-                return badreq();
-            }
+                echo a;
+                echo badreq();
+                die();
+            }*/
 
+            global $KEY_SURVEY_ID, $KEY_ANSWERER;
             $surveyId = $json[$KEY_SURVEY_ID];
+            $answerer = $json[$KEY_ANSWERER];
             $sql = "INSERT INTO answer_list
             (surveyId, answerer)
             VALUES
             (:surveyId, :answerer)";
-
-            $stmt = $pdo->prepare($sql);
-            $params = array (
+            $list = array (
                 ':surveyId' => $surveyId,
-                ':answerer' => $userId
+                ':answerer' => $answerer
             );
-
-            $stmt->execute($params);
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($list);
 
             // answer
-            $sql = "SELECT last_insert_id()";
+            $sql = "SELECT last_insert_id()"; // answerlist
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $result = $stmt->fetchAll();
-            $qId = intval($result[0][0]);
-            $answers = $json[$KEY_ANSWERS];
+            $answerListId = intval($result[0][0]);
+            
+            global $KEY_ANSWERS, $KEY_Q_ID, $KEY_ANSWER_LIST_ID, $KEY_ANSWER;
+            $answers = $json['answers'];
             foreach($answers as $key => $ans) {
                $answer = $ans[$KEY_ANSWER];
-               $sql = "INSERT INTO answer (qId, answer)
-               VALUES (:qId, :answer)";
+               $qId = $ans[$KEY_Q_ID];
+
+               $sql = "INSERT INTO answer 
+                      (answerListId, qId, answer)
+                      VALUES 
+                      (:answerListId, :qId, :answer)";
                $stmt = $pdo->prepare($sql);
-               $params = array (
+               $an = array (
+                   ':answerListId' => $answerListId,
                    ':qId' => $qId,
                    ':answer' => $answer
                );
-               $stmt->execute($params);
+               $stmt->execute($an);
             }
+            $pdo->commit();
             $pdo = null;
             return ok();
 
@@ -315,7 +352,7 @@ function answer_survey($json) {
 
 
 function get_survey_list($privateId, $roomId){
-    if (empty($roomId) == true){
+    if (empty($roomId)){
         return badreq();
     }
 
@@ -328,19 +365,29 @@ function get_survey_list($privateId, $roomId){
         }
 
         // SQL
+        
         $sql = "SELECT
+        a.surveyId, a.name, a.creator, a.description,a.answerWanted
+        FROM survey a, user b, room c
+        WHERE a.creator = b.userId
+        AND a.roomId = c.roomId
+        AND a.roomId = :roomId
+        AND b.privateId = :privateId
+        AND a.answerWanted = true";
+/*
+        $sql = "SELECT 
         a.surveyId, a.name, a.creator, a.description, a.answerWanted
         FROM survey a, affiliation b, user c
-        WHERE roomId = :roomId
-        AND c.privateId = :privateId
+        WHERE a.creator = b.userId
         AND b.userId = c.userId
+        AND c.privateId = :privateId
         AND a.answerWanted = true";
-
+*/
         //SELECT
         $stmt = $pdo->prepare($sql);
         $params = array (
-            ':privateId' => $privateId,
-            ':roomId' => $roomId
+            ':roomId' => $roomId, 
+            ':privateId' => $privateId
         );
 
         $stmt->execute($params);
@@ -348,28 +395,26 @@ function get_survey_list($privateId, $roomId){
         $pdo = null;
 
         global $KEY_SURVEYS, $KEY_SURVEY_ID, $KEY_NAME, $KEY_CREATOR, $KEY_DESCRIPTION, $KEY_ANSWER_WANTED;
-        $survey = array();
+        $surveys = array();
 
         foreach($result as $val){
             $sur = array (
                 $KEY_SURVEY_ID => (int)$val[$KEY_SURVEY_ID],
-                $KEY_NAME => (int)$val[$KEY_NAME],
-                $KEY_CREATOR => (int)$val[$KEY_CREATOR],
+                $KEY_NAME => $val[$KEY_NAME],
+                $KEY_CREATOR => $val[$KEY_CREATOR],
                 $KEY_DESCRIPTION => $val[$KEY_DESCRIPTION],
-                $KEY_ANSWER_WANTED => $val[$KEY_ANSWER_WANTED]
+                $KEY_ANSWER_WANTED => (int)$val[$KEY_ANSWER_WANTED]
             );
-            $survey[] = $sur;
+            $surveys[] = $sur;
         }
-        // $lastTime = date($TIME_FORMAT);
 
         return json_encode(
             array (
-                $KEY_SURVEY => $survey,
-                $KEY_LAST_TIME => $lastTime
+                $KEY_SURVEYS => $surveys
             )
         );
 
-     } catch (Exception $e){
+     } catch (Exception $e) {
         $pdo = null;
         return servererr();
     }
@@ -390,26 +435,21 @@ function get_survey($privateId, $roomId, $surveyId) {
             return servererr();
         }
 
-        // SQL(GET)
-        // surveys
         $sql = "SELECT
-        a.qId, a.qText
-        FROM survey_question a, affiliation b, user c
-        WHERE b.userId = c.userId
-        AND roomId = :roomId
-        AND c.privateId = :privateId
+        a.qId, a.qText, b.itemId, b.text
+        FROM survey_question a, survey_item b
+        WHERE a.qId = b.qId
+        AND a.surveyId = :surveyId
         ";
-
+        
         $stmt = $pdo->prepare($sql);
         $params = array (
-            ':privateId' => $privateId,
-            ':roomId' => $roomId
+            ':surveyId' => $surveyId
         );
-        $stmt->execute($params);
 
-
+        //$stmt->execute($params);
         // items
-        $sql = "SELECT last_insert_id()";
+        /*$sql = "SELECT last_insert_id()";
         $stmt = $pdo->prepare($sql);
         $stmt->execute();
         $result = $stmt->fetchAll();
@@ -425,40 +465,52 @@ function get_survey($privateId, $roomId, $surveyId) {
             WHERE b.userId = c.userId
             AND c.privateId = :privateId
             AND roomId = :roomId
-            ";
-
+            
             $stmt = $pdo->prepare($sql);
             $params = array (
                 ':roomId' => $roomId,
                 ':privateId' => $privateId
             );
         }
-
+*/
         $stmt->execute($params);
         $result = $stmt->fetchAll();
         $pdo = null;
 
-        global $KEY_SURVEY, $KEY_SURVEYS, $KEY_ROOM_ID, $KEY_Q_ID, $KEY_Q_TEXT, $KEY_ITEM_ID, $KEY_TEXT;
-        $surveyget = array();
-        foreach($result as $val){
-            $sur = array (
-                $KEY_ROOM_ID => (int)$val[$KEY_SURVEY_ID],
-                $KEY_Q_ID => (int)$val[$KEY_Q_ID],
-                $KEY_Q_TEXT => $val[$KEY_Q_TEXT],
-                $KEY_SURVEYS => array (
-                    $KEY_ITEM_ID = (int)$val[$KEY_ITEM_ID],
-                    $KEY_TEXT = (int)$val[$KEY_TEXT],
-                )
-            );
-            $surveyget[] = $sur;
-        }
-        // $lastTime = date($TIME_FORMAT);
+        global $KEY_SURVEY_ID, $KEY_ROOM_ID, $KEY_Q_ID, $KEY_Q_TEXT, $KEY_ITEM_ID, $KEY_TEXT, $KEY_SURVEYS,$KEY_ITEMS;
 
+        $surveys = array ();
+        $qId = -1;
+        $first = true;
+        $items = array ();
+        foreach($result as $val) {
+            $queId = (int)$val['qId'];
+            if($qId != $queId) { 
+                // itemの挿入
+                if($first) $first = false;
+                else {
+                    $surveyQuestionObject['items'] = $items;
+                    $surveys[] = $surveyQuestionObject;
+                    $items = array ();
+                }
+                $surveyQuestionObject = array (
+                    'qId' => $queId,
+                    'qText' => $val['qText']
+                );
+            }
+             $items[] = array (
+                'itemId' => (int)$val['itemId'],
+                'text' => $val['text']
+            );
+            $qId = $queId;
+        }
+        $surveyQuestionObject['items'] = $items;
+        $surveys[] = $surveyQuestionObject;
+    
         return json_encode(
             array (
-                $KEY_SURVEY => $sur
-               // $KEY_LAST_TIME => $lastTime
-            )
+                'surveys' => $surveys
+                )
         );
     } catch(Exception $e){
         $pdo = null;
@@ -483,53 +535,71 @@ function answer_get($privateId, $roomId, $surveyId, $lastTime){
         }
 
         // SQL(GET)
+        /*
         $sql = "SELECT
-        a.answerId, a.answerer
-        FROM a.answerlist, b.answer, c.affiliation, d.user
-        WHERE a.answerer = c.userId
+        a.surveyId, a.answerer, b.qId, b.answer
+        FROM answer_list a, answer b, affiliation c, user d, room e, survey_question f, survey g
+        WHERE a.surveyId = g.surveyId 
+        AND a.answerer = d.userId
+        AND a.answerListId = b.answerListId
+        AND b.qId = f.qId
         AND c.userId = d.userId
-        AND a.answerId = b.answerId
-        AND (d.privateId = :privateId OR roomId = :roomId)
-         ";
+        AND c.roomId = e.roomId
+        AND d.privateId = :privateId
+        AND e.roomId = :roomId";*/
+        $sql = "SELECT * FROM answer_list a, answer b
+            WHERE a.answerListId = b.answerListId
+            AND a.surveyId = :surveyId";
 
-        //SELECT
         $stmt = $pdo->prepare($sql);
-        $params = array (
+        /*$params = array (
             ':privateId' => $privateId,
             ':roomId' => $roomId
+        );*/
+        $params = array (
+            ':surveyId' => $surveyId
         );
-
         $stmt->execute($params);
-
-        // ques-tions
-        $sql = "SELECT last_insert_id()";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
         $result = $stmt->fetchAll();
         $pdo = null;
 
-        global $KEY_ANSWER_ID, $KEY_ANSWERER, $KEY_ROOM_ID, $KEY_Q_ID, $KEY_ANSWER, $KEY_QUESTIONS;
+        global $KEY_SURVEY_ID, $KEY_ROOM_ID, $KEY_ANSWER_ID, $KEY_ANSWERER, $KEY_ROOM_ID, $KEY_Q_ID, $KEY_ANSWER, $KEY_ANSWER_LIST, $KEY_ANSWERS;
 
-        $answerget = array();
-
+        $answerlists = array ();
+        $answerListId = -1;
+        $answers = array ();
+        $first = true;
         foreach($result as $val){
-            $ans = array (
-                $KEY_ANSWER_ID => (int)$val[$KEY_ANSWER_ID],
-                $KEY_ANSWERER => (int)$val[$KEY_ANSWERER],
-                $KEY_ROOM_ID => (int)$val[$KEY_ROOM_ID],
-                $KEY_QUESTIONS => array (
-                    $KEY_Q_ID => (int)$val[$KEY_Q_ID],
-                    $KEY_ANSWER => $val[$KEY_ANSWER],
-                )
+            $ansLId = (int)$val['answerListId'];
+            if ($answerListId != $ansLId) { // answer_listの変わり目
+                // answersの挿入
+                if ($first) $first = false;
+                else {
+                    $answerListObject['answers'] = $answers;
+                    $answerLists[] = $answerListObject;
+                    $answers = array ();
+                }
+                // new answer_list
+                $answerListObject = array (
+                    'answerListId' => $ansLId,
+                    'answerer' => (int)$val['answerer']
+                );
+            }
+            // each answer 
+            $answers[] = array (
+                'qId' => (int)$val['qId'],
+                'answer' => $val['answer']
             );
-            $answerget[] = $ans;
+            $answerListId = $ansLId;
         }
-        // $lastTime = date($TIME_FORMAT);
+        // last answer_list
+        $answerListObject['answers'] = $answers;
+        $answerLists[] = $answerListObject;
 
+        // $lastTime = date($TIME_FORMAT); 
         return json_encode(
             array (
-                $KEY_ANSWER => $ans
-                // $KEY_LAST_TIME => $lastTime
+                'answerLists' => $answerLists
             )
         );
     } catch(Exception $e){
