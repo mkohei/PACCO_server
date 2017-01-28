@@ -66,8 +66,10 @@ if($req == "POST") {
         $isPublic = $json[$KEY_IS_PUBLIC];
         $password = $json[$KEY_PASSWORD];
         $host = $json[$KEY_HOST];
+
         #$roomId = $json[$KEY_ROOM_ID];
         #echo create_room($name, $purpose, $isPublic, $password, $host, $roomId);
+
         echo create_room($name, $purpose, $isPublic, $password, $host);
         return;
 
@@ -129,7 +131,9 @@ if($req == "POST") {
 //functions
 //create room
 function create_room($name, $purpose, $isPublic, $password, $host) {
+
 #function create_room($name, $purpose, $isPublic, $password, $host, $roomId) {
+
     //need host
     if(empty($host)){ 
         return badreq();
@@ -157,6 +161,7 @@ function create_room($name, $purpose, $isPublic, $password, $host) {
             VALUES 
             (:name, :purpose, :isPublic, :password, :host)";
             $params = array (
+
                 ':name' => $name,
                 ':purpose' => $purpose,
                 ':isPublic' => $isPublic,
@@ -175,6 +180,7 @@ function create_room($name, $purpose, $isPublic, $password, $host) {
                 ':isPublic' => $isPublic,
                 ':host' => $host
             );
+
             $stmt = $pdo->prepare($sql);
             $stmt -> execute($params);
             
