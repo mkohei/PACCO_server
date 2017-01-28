@@ -88,6 +88,7 @@ function get_chat($privateId, $roomId, $lastTime) {
 
         // Select chat
         // SQL
+        
         $sql = "SELECT
             a.chatId, a.roomId, a.userId, a.content, a.chatTime
             FROM chat a, user b
@@ -115,7 +116,7 @@ function get_chat($privateId, $roomId, $lastTime) {
             );
             $chats[] = $chat;
         }
-        $lastTime = date($TIME_FORMAT);
+        #$lastTime = date($TIME_FORMAT);
         return json_encode(
             array (
                 $KEY_CHATS => $chats,
@@ -165,7 +166,7 @@ function send_chat($privateId, $roomId, $content) {
             $stmt->execute($params);
             $result = $stmt->fetchAll();
             $num = (int)$result[0][0];
-            if ($num != 1) {
+            if ($num >= 1) {
                 echo badreq();
                 die();
             }
