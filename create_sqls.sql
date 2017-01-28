@@ -79,9 +79,14 @@ create table pacco.survey (
 
 ## survey type
 create table pacco.survey_type (
-    typeId int not null auto_increment primary key,
+    typeId int not null primary key,
     type varchar(16) not null
 );
+
+# survey type insert
+insert into pacco.survey_type (typeId, type) values (0, "EDIT");
+insert into pacco.survey_type (typeId, type) values (1, "RADIO");
+insert into pacco.survey_type (typeId, type) values (2, "CHECK");
 
 ## survey question
 create table pacco.survey_question (
