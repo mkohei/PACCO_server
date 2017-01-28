@@ -69,7 +69,7 @@ create table pacco.survey (
     surveyId int not null auto_increment primary key,
     roomId int not null,
     creator int,
-    name varchar(32) not null default 'SURCEY',
+    name varchar(32) not null default 'SURVEY',
     description varchar(256) default '',
     answerWanted boolean not null default false,
     surveyTime timestamp default current_timestamp on update current_timestamp,
