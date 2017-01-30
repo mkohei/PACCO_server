@@ -80,6 +80,8 @@ function get_message($privateId, $roomId, $lastTime) {
         die();
     }
 
+    if (empty($lastTime)) $lastTime = 0;
+
     global $DNS, $USER, $PW;
 
     try {
@@ -160,6 +162,7 @@ function send_message($roomId, $privateId, $userId, $content) {
         $pdo->beginTransaction();
         try {
             // roomId, privateIdの整合性（所属しているか）とmessageロックの確認
+            /*
             $sql = "SELECT COUNT(*) AS num FROM room a, affiliation b, user c
                 WHERE a.roomId = b.roomId AND b.userId = c.userId
                 AND a.roomId = :roomId AND c.privateId = :privateId
@@ -176,7 +179,7 @@ function send_message($roomId, $privateId, $userId, $content) {
             if ($num >= 1) {
                 echo badreq();
                 die();
-            }
+            }*/
 
             $sql = "INSERT INTO message
                 (roomId, fromUser, toUser, content)

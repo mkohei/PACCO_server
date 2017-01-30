@@ -72,10 +72,12 @@ if ($req == "GET") {
 // update chat (get chat)
 function get_chat($privateId, $roomId, $lastTime) {    
     // need private ID and room ID
-    if (empty($privateId) or empty($roomId)) {
+    //if (empty($privateId) or empty($roomId)) {
+    if (empty($roomId)) {
         echo badreq();
         die();
     }
+    if (empty($lastTime)) $lastTime = 0;
 
     global $DNS, $USER, $PW;
 
@@ -89,17 +91,22 @@ function get_chat($privateId, $roomId, $lastTime) {
         // Select chat
         // SQL
         
+        /*$sql = "SELECT
+            a.chatId, a.roomId, a.userId, a.content, a.chatTime
+            FROM chat a, user b
+            WHERE a.userId = b.userId
+            AND a.roomId = :roomId AND b.privateId = :privateId";*/
         $sql = "SELECT
             a.chatId, a.roomId, a.userId, a.content, a.chatTime
             FROM chat a, user b
             WHERE a.userId = b.userId
-            AND a.roomId = :roomId AND b.privateId = :privateId";
-            #AND a.chatTime >= :lastTime";
+            AND a.roomId = :roomId
+            AND a.chatTime >= :lastTime";
 
         $stmt = $pdo->prepare($sql);
         $params = array (
             ':roomId' => $roomId,
-            ':privateId' => $privateId,
+            //':privateId' => $privateId,
             ':lastTime' => $lastTime
         );
         $stmt->execute($params);
@@ -116,11 +123,11 @@ function get_chat($privateId, $roomId, $lastTime) {
             );
             $chats[] = $chat;
         }
-        #$lastTime = date($TIME_FORMAT);
+        $timestamp = date($TIME_FORMAT);
         return json_encode(
             array (
                 $KEY_CHATS => $chats,
-                $KEY_LAST_TIME => $lastTime
+                $KEY_LAST_TIME => $timestamp
             )
         );
         
@@ -153,6 +160,7 @@ function send_chat($privateId, $roomId, $content) {
         // SQL
         $pdo->beginTransaction();
         try {
+            /*
             // roomId, privateIdの整合性(所属しているか)とchatロックの確認　
             $sql = "SELECT COUNT(*) AS num FROM room a, affiliation b, user c
                 WHERE a.roomId = b.roomId AND b.userId = c.userId
@@ -169,7 +177,7 @@ function send_chat($privateId, $roomId, $content) {
             if ($num >= 1) {
                 echo badreq();
                 die();
-            }
+            }*/
 
             // INSERT
             $sql = "INSERT INTO chat
