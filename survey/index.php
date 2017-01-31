@@ -84,6 +84,7 @@ if($req == "POST"){
     $request = $json[$KEY_REQUEST];
 
     if ($request == "CREATE") {
+        //pure_dump($json);
         echo create_survey($json);
         return;
 
@@ -122,9 +123,13 @@ if($req == "POST"){
         $lastTime = $_GET[$KEY_LAST_TIME];
         echo answer_get($privateId, $roomId, $surveyId, $lastTime);
         return;
+    } else {
+        echo badreq();
+        die();
     }
 } else {
-    return badreq();
+    echo badreq();
+    die();
 }
 
 //functions
@@ -134,6 +139,7 @@ function create_survey($json) {
     try {
         $pdo = new PDO($DNS, $USER, $PW);
         if($pdo == null){
+            //echo "pdo null";
             return servererr();
         }
         // Insert new survey
@@ -196,7 +202,6 @@ function create_survey($json) {
             $stmt->execute();
             $result = $stmt->fetchAll();
             $surveyId = intval($result[0][0]);
-
             
             global $KEY_QUESTIONS, $KEY_Q_TEXT, $KEY_TYPE;
             // if (empty($questions))...
@@ -213,9 +218,10 @@ function create_survey($json) {
                     ':qText' => $qText, 
                     ':type' => $type
                 );
-                if ($stmt->execute($que) );
+                if ($stmt->execute($que));
                 else {
                     $pdo->rollBack();
+                    //echo "stmt execute error";
                     echo servererr();
                     die();
                 }
@@ -247,6 +253,7 @@ function create_survey($json) {
                     if ($stmt->execute($ite) );
                     else {
                         $pdo->rollBack();
+                        //echo "stmt execute error2";
                         echo servererr();
                         die();
                     }
@@ -263,6 +270,7 @@ function create_survey($json) {
         }
     } catch (Exception $ex) {
         $pdo = null;
+        //echo "all error";
         return servererr();
     }
 }
@@ -454,13 +462,19 @@ function get_survey($privateId, $roomId, $surveyId) {
             return servererr();
         }
 
-        $sql = "SELECT
+        /*$sql = "SELECT
         c.surveyId, c.name, c.description, c.creator, a.qId, a.qText, a.type, b.itemId, b.text
         FROM survey_question a, survey_item b, survey c
         WHERE a.qId = b.qId
         AND c.surveyId = a.surveyId
         AND a.surveyId = :surveyId
-        ";
+        ";*/
+        $sql = "SELECT
+            a.surveyId, a.roomId, a.creator, a.name, a.description, b.qId, b.qText, b.type, c.itemId, c.text
+            FROM survey a, survey_question b LEFT OUTER JOIN survey_item c
+            ON b.qId = c.qId
+            WHERE a.surveyId = b.surveyId
+            AND a.surveyId = :surveyId";
         
         $stmt = $pdo->prepare($sql);
         $params = array (
@@ -516,22 +530,25 @@ function get_survey($privateId, $roomId, $surveyId) {
                     $survey['creator'] = $val['creator'];
                 }
                 else {
-                    $surveyQuestionObject['items'] = $items;
+                    if (!empty($items)) $surveyQuestionObject['items'] = $items;
                     $surveys[] = $surveyQuestionObject;
                     $items = array ();
                 }
                 $surveyQuestionObject = array (
                     'qId' => $queId,
-                    'qText' => $val['qText']
+                    'qText' => $val['qText'],
+                    'type' => (int)$val['type']
                 );
             }
-             $items[] = array (
-                'itemId' => (int)$val['itemId'],
-                'text' => $val['text']
-            );
+            if (!empty($val['itemId'])) {
+                $items[] = array (
+                    'itemId' => (int)$val['itemId'],
+                    'text' => $val['text']
+                );
+            }
             $qId = $queId;
         }
-        $surveyQuestionObject['items'] = $items;
+        if (!empty($items)) $surveyQuestionObject['items'] = $items;
         $surveys[] = $surveyQuestionObject;
         $survey['questions'] = $surveys;
         return json_encode(
@@ -572,7 +589,8 @@ function answer_get($privateId, $roomId, $surveyId, $lastTime){
         AND c.roomId = e.roomId
         AND d.privateId = :privateId
         AND e.roomId = :roomId";*/
-        $sql = "SELECT * FROM answer_list a, answer b
+        $sql = "SELECT a.answerListId, a.surveyId, a.answerer, b.answerId, b.qId, b.answer
+            FROM answer_list a, answer b
             WHERE a.answerListId = b.answerListId
             AND a.surveyId = :surveyId";
 
@@ -612,6 +630,7 @@ function answer_get($privateId, $roomId, $surveyId, $lastTime){
             }
             // each answer 
             $answers[] = array (
+                'answerId' => (int)$val['answerId'],
                 'qId' => (int)$val['qId'],
                 'answer' => $val['answer']
             );

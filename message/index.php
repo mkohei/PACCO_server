@@ -149,7 +149,6 @@ function send_message($roomId, $privateId, $userId, $content) {
     }
 
     global $DNS, $USER, $PW;
-    echo 'send massage funcation is called.';
     try {
         $pdo = new PDO($DNS, $USER, $PW);
         if ($pdo == null) {

@@ -556,10 +556,10 @@ function get_room($privateId) {
         $rooms = array ();
         foreach ($result as $val) {
             $r = array (
-                'roomId' => $val['roomId'],
+                'roomId' => (int)$val['roomId'],
                 'name' => $val['name'],
                 'purpose' => $val['purpose'],
-                'host' => $val['host']
+                //'host' => (int)$val['host']
             );
             $rooms[] = $r;
         }
@@ -599,13 +599,13 @@ function get_member($roomId) {
         $affiliations = array ();
         foreach ($result as $val) {
             $m = array (
-                'userId' => $val['userId'],
+                'userId' => (int)$val['userId'],
                 'name' => $val['name']
             );
             $a = array (
-                'affiliationId' => $val['affiliation'],
-                'userId' => $val['userId'],
-                'roomId' => $val['roomId']
+                'affiliationId' => (int)$val['affiliation'],
+                'userId' => (int)$val['userId'],
+                'roomId' => (int)$val['roomId']
             );
             $members[] = $m;
             $affiliations[] = $a;
