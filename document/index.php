@@ -25,7 +25,7 @@ function get_doc($roomId) {
         if ($pdo == null) return servererr();
 
         $sql = "SELECT
-            docId, name FROM document
+            docId, name, roomId FROM document
             WHERE roomId = :roomId";
         $stmt = $pdo->prepare($sql);
         $params = array (
@@ -39,6 +39,7 @@ function get_doc($roomId) {
             $d = array (
                 'docId' => (int)$val['docId'],
                 'name' => $val['name'],
+                'roomId' => (int)$val['roomId']
             );
             $documents[] = $d;
         }
