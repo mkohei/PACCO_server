@@ -603,7 +603,7 @@ function get_member($roomId) {
                 'name' => $val['name']
             );
             $a = array (
-                'affiliationId' => (int)$val['affiliation'],
+                'affiliationId' => (int)$val['affiliationId'],
                 'userId' => (int)$val['userId'],
                 'roomId' => (int)$val['roomId']
             );
