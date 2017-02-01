@@ -1,6 +1,9 @@
 # DB作成Ω
 create database pacco;
 
+# select DB
+use pacco;
+
 # TABLE作成
 ## user
 create table pacco.user (
