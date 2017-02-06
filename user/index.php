@@ -33,19 +33,22 @@ if ($req == "POST") {
     echo create_account($name, $terminalId, $password, $mail_address);
     return;
 
-} else if ($req == "PUT") {
+} else if ($req == "GET") {
     // change account information
-    $params = array ();
-    parse_str(file_get_contents('php://input'), $params);
-    $privateId = $params[$KEY_PRIVATE_ID];
-    $name = $params[$KEY_NAME];
-    $password = $params[$KEY_PASSWORD];
-    $mail_address = $params[$KEY_MAIL_ADDRESS];
+    //$params = array ();
+    //parse_str(file_get_contents('php://input'), $params);
+    //pure_dump($params);
+    //return;
+    $privateId = $_GET[$KEY_PRIVATE_ID];
+    $name = $_GET[$KEY_NAME];
+    $password = $_GET[$KEY_PASSWORD];
+    $mail_address = $_GET[$KEY_MAIL_ADDRESS];
     echo change_account($privateId, $name, $password, $mail_address);
     return;
 
 } else {
     echo badreq(); // Error
+    die();
 }
 
 // functions

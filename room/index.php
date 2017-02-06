@@ -123,9 +123,33 @@ if($req == "POST") {
         echo change_room($privateId, $roomId, $name, $purpose, $password, $isPublic);
         return;
     }
+
+} else if ($req == "GET") {
+    $request = $_GET["request"];
+    if ($request == "ROOM") {
+        // get room
+        $privateId = $_GET["privateId"];
+        echo get_room($privateId);
+        return;
+
+    } else if ($request == "MEMBER") {
+        // get member
+        $roomId = $_GET['roomId'];
+        echo get_member($roomId);
+        return;
+
+    } else if ($request == "SEARCH") {
+        // 現状 get all room
+
+    } else {
+        echo badreq();
+        die();
+    }
+
 } else {
     //Error
-    echo badreq();      
+    echo badreq();
+    die();
 }
 
 //functions
@@ -440,7 +464,7 @@ function change_room($privateId, $roomId, $name, $purpose, $password, $isPublic)
     if(empty($privateId) or empty($roomId)) {
         return badreq();
     }
-global $DNS, $USER, $PW; // use global parameter
+    global $DNS, $USER, $PW; // use global parameter
     
     try {
         $pdo = new PDO($DNS, $USER, $PW); // connect
@@ -482,7 +506,7 @@ global $DNS, $USER, $PW; // use global parameter
             $sql = $sql." WHERE a.host = b.userId
                             AND a.roomId = :roomId
                             AND b.privateId = :privateId";
-            print $sql;
+            //print $sql;
             pure_dump($params);
             $params[':roomId'] = $roomId;
             $params[':privateId'] = $privateId;
@@ -506,6 +530,96 @@ global $DNS, $USER, $PW; // use global parameter
         $pdo = null;
         echo servererr();
         die();
+    }
+}
+
+function get_room($privateId) {
+    if (empty($privateId)) return badreq();
+    global $DNS, $USER, $PW;
+    try {
+        $pdo = new PDO($DNS, $USER, $PW); // connect
+        if ($pdo == null) return servererr();
+
+        $sql = "SELECT
+            a.roomId, a.name, a.purpose, a.host
+            FROM room a, affiliation b, user c
+            WHERE a.roomId = b.roomId AND b.userId = c.userId
+            AND c.privateId = :privateId";
+        $params = array (
+            ':privateId' => $privateId
+        );
+        $stmt = $pdo->prepare($sql);
+        $success = $stmt->execute($params);
+        $pdo = null;
+        //if (!$success) return badreq();
+        $result = $stmt->fetchAll();
+        $rooms = array ();
+        foreach ($result as $val) {
+            $r = array (
+                'roomId' => (int)$val['roomId'],
+                'name' => $val['name'],
+                'purpose' => $val['purpose'],
+                //'host' => (int)$val['host']
+            );
+            $rooms[] = $r;
+        }
+        return json_encode (
+            array (
+                'rooms' => $rooms
+            )
+        );
+    } catch (Exception $e) {
+        $pdo = null;
+        return servererr();
+    }
+}
+
+
+function get_member($roomId) {
+    if (empty($roomId)) return badreq();
+    global $DNS, $USER, $PW;
+    try {
+        $pdo = new PDO($DNS, $USER, $PW); // connect
+        if ($pdo == null) return servererr();
+
+        $sql = "SELECT
+            a.userId, a.name, b.affiliationId, b.roomId
+            FROM user a, affiliation b
+            WHERE a.userId = b.userId
+            AND b.roomId = :roomId";
+        $params = array (
+            ':roomId' => $roomId
+        );
+        $stmt = $pdo->prepare($sql);
+        $success = $stmt->execute($params);
+        $pdo = null;
+        //if (!success) return badreq();
+        $result = $stmt->fetchAll();
+        $members = array ();
+        $affiliations = array ();
+        foreach ($result as $val) {
+            $m = array (
+                'userId' => (int)$val['userId'],
+                'name' => $val['name']
+            );
+            $a = array (
+                'affiliationId' => (int)$val['affiliationId'],
+                'userId' => (int)$val['userId'],
+                'roomId' => (int)$val['roomId']
+            );
+            $members[] = $m;
+            $affiliations[] = $a;
+        }
+        return json_encode (
+            array (
+                'members' => $members,
+                'affiliations' => $affiliations
+            )
+        );
+
+    } catch (Exception $e) {
+        $pdo = null;
+        return servererr();
     }
 }
     
